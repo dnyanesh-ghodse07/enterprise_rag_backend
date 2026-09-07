@@ -154,7 +154,7 @@ async def refresh_token(
     }
     """
     service = AuthService(db)
-    return await service.refresh_tokens(data.refresh_token)
+    return await service.refresh_token(data.refresh_token)
 
 
 @router.post(
