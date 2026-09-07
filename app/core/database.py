@@ -34,6 +34,19 @@ from app.config import get_settings
 
 settings = get_settings()
 
+# SSL is required by Neon, but local Postgres usually runs without TLS.
+# Only enable it for remote/production URLs so localhost development keeps working.
+# You can also override this with the DATABASE_URL itself by including sslmode=require.
+database_url = settings.database_url.lower()
+connect_args = {}
+if (
+    settings.environment == "production"
+    or "neon.tech" in database_url
+    or "sslmode=require" in database_url
+    or "ssl=true" in database_url
+):
+    connect_args = {"ssl": "require"}
+
 # ─── Create the async engine ──────────────────────────────────────
 # The engine manages the connection pool to PostgreSQL.
 # Think of it as the "parking garage" that holds database connections.
@@ -46,9 +59,7 @@ engine = create_async_engine(
     pool_timeout=settings.database_pool_timeout,   # Wait max 30 seconds for a connection
     pool_recycle=3600,  # Recycle connections every hour (prevents stale connections)
     pool_pre_ping=True,  # Test connection before using it (handles database restarts)
-    connect_args={
-        "ssl": "require"
-    },
+    connect_args=connect_args,
     
     # Logging
     echo=settings.debug,  # Log SQL queries in debug mode (NEVER in production!)
