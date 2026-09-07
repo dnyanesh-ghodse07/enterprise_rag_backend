@@ -1,0 +1,148 @@
+# ═══════════════════════════════════════════════════════════════
+# Cognix — Local Development Services
+# ═══════════════════════════════════════════════════════════════
+#
+# Start all services:     docker compose up -d
+# Stop all services:      docker compose down
+# View logs:              docker compose logs -f
+# Reset everything:       docker compose down -v  (deletes data!)
+#
+# ═══════════════════════════════════════════════════════════════
+
+version: "3.9" # Docker Compose file format version
+
+services:
+  # ─── PostgreSQL ────────────────────────────────────────────
+  # Our primary relational database.
+  # Stores: users, tenants, documents metadata, conversations, audit logs
+  #
+  # WHY PostgreSQL 16:
+  # - Most advanced open-source RDBMS
+
+  # - JSONB for semi-structured data
+  # - Full-text search (BM25) built in
+  # - Row-Level Security for multi-tenancy
+  # - Excellent performance with proper indexing
+  #
+  # INTERNAL: PostgreSQL runs as a single process (postmaster)
+  # that forks child processes for each client connection.
+  # The connection pool in our app limits how many connections
+  # we create simultaneously.
+  postgres:
+    image: postgres:16-alpine # Alpine = smaller image (~80MB vs ~400MB)
+    container_name: cognix-postgres
+    restart: unless-stopped # Auto-restart on crash, but not after manual stop
+    environment:
+      POSTGRES_USER: cognix
+      POSTGRES_PASSWORD: cognix_dev # ONLY for local dev!
+      POSTGRES_DB: cognix
+      # Performance tuning for development
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
+    ports:
+      - "5434:5432" # host:container — access from localhost:5434
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Persist data between restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cognix"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Fail if no response in 5 seconds
+      retries: 5 # Mark unhealthy after 5 failures
+      start_period: 30s # Don't check during first 30 seconds (startup time)
+
+  # ─── Redis ─────────────────────────────────────────────────
+  # In-memory data store.
+  # Used for: caching, session storage, rate limiting, Celery task queue
+  #
+  # WHY Redis:
+  # - Blazing fast (100K+ ops/second)
+  # - Versatile data structures (strings, lists, sets, hashes, streams)
+  # - Built-in pub/sub for real-time features
+  # - Celery's default broker
+  #
+  # INTERNAL: Redis stores ALL data in RAM. It periodically
+  # saves snapshots to disk (RDB) and/or logs every write (AOF).
+  # For our dev setup, persistence doesn't matter.
+  redis:
+    image: redis:7-alpine
+    container_name: cognix-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: >
+      redis-server
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+
+  # ─── Qdrant ────────────────────────────────────────────────
+  # Vector database for semantic search.
+  # Stores: document chunk embeddings, payload metadata
+  #
+  # WHY Qdrant:
+  # - Purpose-built for vector similarity search
+  # - HNSW index (fast approximate nearest neighbor)
+  # - Rich filtering (combine vector search with metadata filters)
+  # - REST API + gRPC (fast communication)
+  # - Written in Rust (fast, memory-safe)
+  #
+  # INTERNAL: Qdrant uses HNSW (Hierarchical Navigable Small World)
+  # graphs for approximate nearest neighbor search. Think of it as
+  # a multi-level skip list where each node connects to its nearest
+  # neighbors. Searching starts at the top (coarse) level and
+  # navigates down to the bottom (fine) level.
+  qdrant:
+    image: qdrant/qdrant:v1.12.5
+    container_name: cognix-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333" # REST API
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__GRPC_PORT: 6334
+
+  # ─── Neo4j (Knowledge Graph) ──────────────────────────────
+  # Graph database for knowledge graph RAG.
+  # Stores: entity relationships, concept hierarchies
+  #
+  # WHY Neo4j:
+  # - Native graph storage and processing
+  # - Cypher query language (intuitive for graph queries)
+  # - Graph algorithms built in
+  # - Visualization tools
+  #
+  # We won't use this until Day 9, but having it in docker-compose
+  # from the start means zero setup on that day.
+  neo4j:
+    image: neo4j:5-community
+    container_name: cognix-neo4j
+    restart: unless-stopped
+    ports:
+      - "7474:7474" # HTTP (web interface)
+      - "7687:7687" # Bolt protocol (query interface)
+    environment:
+      NEO4J_AUTH: neo4j/cognix_dev # username/password
+      NEO4J_PLUGINS: '["apoc"]' # Awesome Procedures on Cypher
+    volumes:
+      - neo4j_data:/data
+
+# ─── Named Volumes ─────────────────────────────────────────
+# Named volumes persist data between container restarts.
+# 'docker compose down' preserves volumes.
+# 'docker compose down -v' DELETES volumes (full reset).
+volumes:
+  postgres_data:
+    name: cognix-postgres-data
+  redis_data:
+    name: cognix-redis-data
+  qdrant_data:
+    name: cognix-qdrant-data
+  neo4j_data:
+    name: cognix-neo4j-data
