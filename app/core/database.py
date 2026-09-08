@@ -62,7 +62,8 @@ engine = create_async_engine(
     connect_args=connect_args,
     
     # Logging
-    echo=settings.debug,  # Log SQL queries in debug mode (NEVER in production!)
+    echo=False
+    # echo=settings.debug,  # Log SQL queries in debug mode (NEVER in production!)
 )
 
 # ─── Create session factory ───────────────────────────────────────

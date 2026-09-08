@@ -1,3 +1,4 @@
+import logging
 from app.schemas.auth import UserRegister, TokenResponse
 from app.core.security import (
   hash_password,
@@ -17,6 +18,7 @@ from app.config import get_settings
 from app.models import User, Tenant, RefreshToken, UserRole
 from app.core.exceptions import (AuthenticationError, ValidationError, NotFoundError)
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 class AuthService:
@@ -128,7 +130,13 @@ class AuthService:
         expires_in=settings.access_token_expire_minutes * 60
       )
 
-  async def login(self, email: str, password: str) -> TokenResponse:
+  async def login(
+    self,
+    email: str,
+    password: str,
+    ip_address: str | None = None,
+    user_agent: str | None = None
+    ) -> TokenResponse:
     """
     Authenticate a user and return tokens.
 
@@ -153,24 +161,57 @@ class AuthService:
 
     # Same error message for "user not found" and "wrong password"
     if user is None:
+      logger.warning(
+        "auth.login.failure",
+        extra={
+            "email": email,
+            "ip_address": ip_address,
+            "reason": "user_not_found",
+        },
+      )
       raise AuthenticationError(
         message="Invalid email or password",
       )
 
     # verify password (Argon2 password verification) 
     if not verify_password(password, user.hashed_password):
+      logger.warning(
+        "auth.login.failure",
+        extra={
+            "email": email,
+            "ip_address": ip_address,
+            "user_agent": user_agent,
+            "reason": "invalid_password",
+        },
+      )
       raise AuthenticationError(
         message="Invalid email or password",
       )
     
     # Check user is active
     if not user.is_active:
+      logger.warning(
+        "auth.login.failure",
+        extra={
+            "email": email,
+            "ip_address": ip_address,
+            "reason": "account_disabled",
+        },
+      )
       raise AuthenticationError(
         message="User account is disabled. Contact support.",
       )
     
     # Check tenant is active
     if not user.tenant.is_active:
+      logger.warning(
+        "auth.login.failure",
+        extra={
+            "email": email,
+            "ip_address": ip_address,
+            "reason": "tenant_suspended",
+        },
+      )
       raise AuthenticationError(
         message="Organization is suspended. Contact support.",
       )
@@ -199,6 +240,15 @@ class AuthService:
 
     await self.db.commit()
 
+    # logging
+    logger.info("auth.login.success", extra={
+      "user_id": user.id,
+      "tenant_id": user.tenant_id,
+      "ip_address": ip_address,
+      "user_agent": user_agent
+
+    })
+
     return TokenResponse(
       access_token=access_token,
       refresh_token=refresh_token_str,
@@ -206,7 +256,11 @@ class AuthService:
       expires_in=settings.access_token_expire_minutes * 60
     )
 
-  async def refresh_token(self, refresh_token_str: str) -> TokenResponse:
+  async def refresh_token(
+    self,
+    refresh_token_str: str,
+    ip_address: str | None = None,
+    ) -> TokenResponse:
     """
       Exchange a refresh token for new access + refresh tokens.
       
@@ -258,6 +312,11 @@ class AuthService:
       # Token not found - possible theft
       # the original token was revoked or never existed
       # Revoke all tokens for this user as a security measure
+      logger.critical("auth.security.token_reuse_detected", extra={
+        "user_id": user_id,
+        "token_id": token.id,
+        "ip_address": ip_address
+      })
       await self._revoke_all_tokens_for_user(UUID(user_id))
       raise AuthenticationError(
         message="Token reuse detected. All sessions revoked. Please log in again.",
@@ -306,6 +365,12 @@ class AuthService:
     stored_token.replaced_by_id = new_refresh_token_obj.id
 
     await self.db.commit()
+
+    logger.info("auth.token.refresh", extra={
+      "user_id": user_id,
+      "old_token_id": stored_token.id,
+      "new_token_id": new_refresh_token_obj.id
+    })
 
     return TokenResponse(
       access_token=new_access_token,

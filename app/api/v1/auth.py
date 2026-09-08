@@ -15,7 +15,7 @@ DESIGN PRINCIPLES:
 - OpenAPI documentation with examples
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser
@@ -91,6 +91,7 @@ async def register(
     },
 )
 async def login(
+    request: Request,
     data: UserLogin,
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
@@ -117,7 +118,12 @@ async def login(
     - Consider adding CAPTCHA after N failed attempts
     """
     service = AuthService(db)
-    return await service.login(data.email, data.password)
+    return await service.login(
+        data.email, 
+        data.password,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
 
 
 @router.post(
@@ -134,6 +140,7 @@ async def login(
     },
 )
 async def refresh_token(
+    request: Request,
     data: TokenRefresh,
     db: AsyncSession = Depends(get_session),
 ) -> TokenResponse:
@@ -154,7 +161,10 @@ async def refresh_token(
     }
     """
     service = AuthService(db)
-    return await service.refresh_token(data.refresh_token)
+    return await service.refresh_token(
+        data.refresh_token,
+        ip_address=request.client.host if request.client else None,
+    )
 
 
 @router.post(
