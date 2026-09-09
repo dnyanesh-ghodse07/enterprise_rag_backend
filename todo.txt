@@ -1,3 +1,52 @@
 Row level security
 Rate limiting for requests
 Token storage best practice
+
+** Document access control for RAG**
+RBAC + Document-Level Permissions:
+═══════════════════════════════════════
+
+In a RAG system, access control affects RETRIEVAL:
+
+  User asks: "What is the Q4 revenue?"
+  
+  1. Embed the question → vector
+  2. Search Qdrant for similar chunks
+  3. ← FILTER BY PERMISSIONS HERE
+     
+     chunk_1: Q4 report (public to all editors) ✅
+     chunk_2: Executive salary (admin only)      ❌ Alice is editor
+     chunk_3: HR complaint (private)              ❌ Not Alice's document
+     chunk_4: Q4 summary (public)                ✅
+     
+  4. Send filtered chunks to LLM
+  5. LLM generates answer using only authorized chunks
+
+  If we skip step 3, the LLM might reveal:
+  "The Q4 revenue was $50M. Also, the CEO's salary is $2M."
+  ← SECURITY BREACH! Alice shouldn't know the CEO's salary.
+
+
+************** SECURITY.py **************
+
+Improvement	💡	Add JWT blacklist support for immediate revocation
+Improvement	💡	Consider adding jti (JWT ID) claim for tracking
+Security risk	⚠️	If secret_key is weak, all JWTs can be forged. Add startup validation.
+
+------------
+
+************* auth_service.py ***********
+
+Improvement	💡	Add login attempt tracking (rate limiting)
+Improvement	💡	Add password change endpoint
+Improvement	💡	Add email verification workflow
+
+------
+
+******** deps.py ***********
+
+Improvement	💡	Cache user lookups in Redis (avoid DB hit on every request)
+Improvement	💡	Add rate_limited dependency
+
+----------
+

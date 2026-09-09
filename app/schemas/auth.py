@@ -18,6 +18,33 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+def validate_password_strength(v: str) -> str:
+    """
+        Enforce password complexity rules.
+        
+        Requirements:
+        - At least 8 characters (already enforced by min_length)
+        - At least one uppercase letter
+        - At least one lowercase letter
+        - At least one digit
+        
+        WHY THESE RULES:
+        - Short passwords are easily brute-forced
+        - Dictionary words are in rainbow tables
+        - Mixing character types exponentially increases the search space
+        
+        PASSWORD ENTROPY:
+        - 8 lowercase letters: 26^8 = 208 billion combos
+        - 8 mixed case + digits: 62^8 = 218 trillion combos
+        - 1000x harder to crack!
+    """
+    if not any(c.isupper() for c in v):
+        raise ValueError("Password must contain at least one uppercase letter")
+    if not any(c.islower() for c in v):
+        raise ValueError("Password must contain at least one lowercase letter")
+    if not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain at least one digit")
+    return v
 
 class TenantCreate(BaseModel):
     """Schema for creating a new tenant during registration."""
@@ -54,7 +81,6 @@ class TenantCreate(BaseModel):
             raise ValueError("Slug must contain only lowercase letters, numbers, and hyphens")
         return v.lower()
 
-
 class UserRegister(BaseModel):
     """
     Schema for user registration.
@@ -88,34 +114,8 @@ class UserRegister(BaseModel):
     
     @field_validator("password")
     @classmethod
-    def validate_password_strength(cls, v: str) -> str:
-        """
-        Enforce password complexity rules.
-        
-        Requirements:
-        - At least 8 characters (already enforced by min_length)
-        - At least one uppercase letter
-        - At least one lowercase letter
-        - At least one digit
-        
-        WHY THESE RULES:
-        - Short passwords are easily brute-forced
-        - Dictionary words are in rainbow tables
-        - Mixing character types exponentially increases the search space
-        
-        PASSWORD ENTROPY:
-        - 8 lowercase letters: 26^8 = 208 billion combos
-        - 8 mixed case + digits: 62^8 = 218 trillion combos
-        - 1000x harder to crack!
-        """
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
-        if not any(c.islower() for c in v):
-            raise ValueError("Password must contain at least one lowercase letter")
-        if not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one digit")
-        return v
-
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)
 
 class UserLogin(BaseModel):
     """Schema for user login."""
@@ -129,7 +129,6 @@ class UserLogin(BaseModel):
         description="Account password",
         examples=["MyStr0ngP@ssword!"],
     )
-
 
 class TokenResponse(BaseModel):
     """
@@ -145,14 +144,12 @@ class TokenResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Token type (always 'bearer')")
     expires_in: int = Field(..., description="Access token lifetime in seconds")
 
-
 class TokenRefresh(BaseModel):
     """Schema for refreshing an access token."""
     refresh_token: str = Field(
         ...,
         description="The refresh token received during login",
     )
-
 
 class UserResponse(BaseModel):
     """
@@ -180,8 +177,23 @@ class UserResponse(BaseModel):
     #   response = UserResponse.model_validate(user_obj)
     # Without this, Pydantic wouldn't know how to read SQLAlchemy attributes.
 
-
 class MessageResponse(BaseModel):
     """Generic message response."""
     message: str
     detail: str | None = None
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(
+        ...,
+        description="Current Password",
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=128,
+        description="New password"
+    )
+    @field_validator("new_password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        return validate_password_strength(v)

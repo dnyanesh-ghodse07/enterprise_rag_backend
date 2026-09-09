@@ -25,7 +25,6 @@ class UserRole(str, enum.Enum):
     }
     return hierarchy[user_role] >= hierarchy[required_role]
 
-
 class User(BaseModel):
   __tablename__ = "users"
 

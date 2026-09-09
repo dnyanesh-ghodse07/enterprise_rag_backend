@@ -27,6 +27,7 @@ from app.schemas.auth import (
     UserLogin,
     UserRegister,
     UserResponse,
+    PasswordChange
 )
 from app.services.auth_service import AuthService
 
@@ -227,4 +228,24 @@ async def get_me(user: CurrentUser) -> UserResponse:
         tenant_name=user.tenant.name if user.tenant else None,
         created_at=user.created_at,
         last_login_at=user.last_login_at,
+    )
+
+@router.post(
+    "/change-password",
+    response_model=MessageResponse,
+    summary="Change current password",
+        responses={
+        200: {"description": "Password changed"},
+        401: {"description": "Not authenticated"},
+    },
+)
+async def change_password(user: CurrentUser, data: PasswordChange, db: AsyncSession = Depends(get_session),) -> None:
+
+    print("data", data)
+    services = AuthService(db)
+    await services.change_password(user, data.current_password, data.new_password)
+
+    return MessageResponse(
+        message='Password Changed Successfully !',
+        description=''
     )

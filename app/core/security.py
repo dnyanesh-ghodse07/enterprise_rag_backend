@@ -110,6 +110,10 @@ def create_access_token(
     "user_id": str(user_id),
     "tenant_id": str(tenant_id),
     "role": role,
+    "token_budget":{
+      "daily_limit": 10000,
+      "monthly_limit": 300000,
+    },
     "type": "access",
     "exp": int(expire.timestamp()),
     "iat": int(now.timestamp())
@@ -117,6 +121,14 @@ def create_access_token(
 
   return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
+  """
+  token_budget
+  On each LLM call:
+  1. Check user's remaining budget
+  2. Estimate token usage (prompt length)
+  3. If over budget → return friendly error
+  4. After call → update usage counter in Redis
+  """
 
 def create_refresh_token(
   user_id: UUID,

@@ -1,5 +1,5 @@
 import logging
-from app.schemas.auth import UserRegister, TokenResponse
+from app.schemas.auth import UserRegister, TokenResponse, PasswordChange
 from app.core.security import (
   hash_password,
   verify_password,
@@ -404,6 +404,42 @@ class AuthService:
       stored_token.revoked_at = datetime.now(timezone.utc)
       await self.db.commit()
 
+  async def change_password(self, user, current_password, new_password) -> None:
+    print("cp---------", current_password)
+    print("np---------", new_password)
+    """
+    Change the user's password after verifying the current password.
+
+    Steps:
+    - Verify provided current_password against stored hash
+    - Update the user's hashed_password with the new password
+    - Revoke all existing refresh tokens for this user (force re-login)
+    - Commit the transaction and log the change
+    """
+
+    # Verify the current password matches the stored hash
+    if not verify_password(current_password, user.hashed_password):
+      logger.warning("auth.password.change.failure", extra={
+        "user_id": getattr(user, "id", None)
+      })
+      raise AuthenticationError(
+        message="Current password is incorrect",
+      )
+
+    if not new_password or len(new_password) < 8:
+      print("-----------new password", new_password)
+      raise ValidationError(message="New password too short")
+    # Hash and update the new password
+    user.hashed_password = hash_password(new_password)
+
+    # Revoke all refresh tokens so existing sessions must re-authenticate
+    await self._revoke_all_tokens_for_user(user.id)
+
+    await self.db.commit()
+
+    logger.info("auth.password.change.success", extra={
+      "user_id": user.id
+    })
 
   async def _revoke_all_tokens_for_user(self, user_id: UUID) -> None:
     """
