@@ -36,7 +36,7 @@ class AuthService:
     Initialise with the db session
 
     The session is injected by FastAPI's dependency system:
-          auth_service = AuthService(db=Depends(get_session))
+      auth_service = AuthService(db=Depends(get_session))
     """
     self.db = db
 

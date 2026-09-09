@@ -240,8 +240,6 @@ async def get_me(user: CurrentUser) -> UserResponse:
     },
 )
 async def change_password(user: CurrentUser, data: PasswordChange, db: AsyncSession = Depends(get_session),) -> None:
-
-    print("data", data)
     services = AuthService(db)
     await services.change_password(user, data.current_password, data.new_password)
 
