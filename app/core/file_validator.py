@@ -246,7 +246,7 @@ class FileValidator:
         name, ext = os.path.splitext(filename)
         name = re.sub(r"[^\w\-.]", "-", name)
         name = re.sub(r"_+", "_", name)
-        name = name.stripe("_.")
+        name = name.strip("_.")
 
         # Truncate name (keep extension)
         max_name_length = 200  # Leave room for extension and hash

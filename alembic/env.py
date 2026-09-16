@@ -17,11 +17,16 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import base first, then models to register tables in metadata
+# Import base first, then models to register tables in metadata.
+# Include the document tables here as well; without them Alembic metadata
+# can silently miss the tables that the app later queries.
 from app.models.base import Base
-from app.models.user import User          # noqa: F401
-from app.models.tenant import Tenant      # noqa: F401
+from app.models.user import User  # noqa: F401
+from app.models.tenant import Tenant  # noqa: F401
 from app.models.refresh_token import RefreshToken  # noqa: F401
+from app.models.collection import Collection  # noqa: F401
+from app.models.document import Document  # noqa: F401
+from app.models.document_version import DocumentVersion  # noqa: F401
 
 from app.config import get_settings
 
@@ -53,10 +58,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(
-        connection=connection,
-        target_metadata=target_metadata
-    )
+    context.configure(connection=connection, target_metadata=target_metadata)
     with context.begin_transaction():
         context.run_migrations()
 
