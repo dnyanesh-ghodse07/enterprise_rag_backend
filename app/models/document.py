@@ -125,7 +125,12 @@ class Document(BaseModel):
 
     # ─── Status ───────────────────────────────────────────────
     status: Mapped[DocumentStatus] = mapped_column(
-        Enum(DocumentStatus, name="document_status", create_constraint=True),
+        Enum(
+            DocumentStatus,
+            name="document_status",
+            values_callable=lambda enum_class: [e.value for e in enum_class],
+            create_constraint=True,
+        ),
         default=DocumentStatus.UPLOADED,
         server_default=DocumentStatus.UPLOADED.value,
         nullable=False,
