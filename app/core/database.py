@@ -31,7 +31,6 @@ from sqlalchemy.ext.asyncio import (
 )
 from app.config import get_settings
 
-
 settings = get_settings()
 
 # SSL is required by Neon, but local Postgres usually runs without TLS.
@@ -52,17 +51,15 @@ if (
 # Think of it as the "parking garage" that holds database connections.
 engine = create_async_engine(
     settings.database_url,
-    
     # Pool configuration
-    pool_size=settings.database_pool_size,        # Normal capacity: 20 connections
-    max_overflow=settings.database_max_overflow,   # Emergency capacity: +10 connections
-    pool_timeout=settings.database_pool_timeout,   # Wait max 30 seconds for a connection
+    pool_size=settings.database_pool_size,  # Normal capacity: 20 connections
+    max_overflow=settings.database_max_overflow,  # Emergency capacity: +10 connections
+    pool_timeout=settings.database_pool_timeout,  # Wait max 30 seconds for a connection
     pool_recycle=3600,  # Recycle connections every hour (prevents stale connections)
     pool_pre_ping=True,  # Test connection before using it (handles database restarts)
     connect_args=connect_args,
-    
     # Logging
-    echo=False
+    echo=False,
     # echo=settings.debug,  # Log SQL queries in debug mode (NEVER in production!)
 )
 
@@ -83,17 +80,17 @@ async_session_factory = async_sessionmaker(
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency that provides a database session for each request.
-    
+
     Usage in FastAPI:
         @router.get("/items")
         async def get_items(session: AsyncSession = Depends(get_session)):
             result = await session.execute(select(Item))
             return result.scalars().all()
-    
+
     The 'yield' pattern ensures the session is ALWAYS closed,
     even if the request handler raises an exception.
     This is called a "context manager" pattern.
-    
+
     WHY YIELD AND NOT RETURN:
     - yield pauses the function, gives the session to the caller
     - The caller (FastAPI) uses the session
@@ -111,7 +108,7 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """
     Initialize the database connection on startup.
-    
+
     This is called once when the application starts.
     It verifies that the database is reachable.
     If not, the app should fail LOUDLY at startup,

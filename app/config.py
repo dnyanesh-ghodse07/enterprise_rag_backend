@@ -51,6 +51,37 @@ class Settings(BaseSettings):
     qdrant_port: int = 6333
     qdrant_collection: str = "cognix_documents"
 
+
+    # storage settings
+    storage_backend: str = "local" #local or s3
+    storage_local_path: str = './uploads'
+
+    # s3 settings(for production)
+    s3_bucket_name: str = ""
+    s3_region: str = "us-east-1"
+    s3_access_key: str = ""
+    s3_secret_key: str = ""
+    s3_endpoint_url: str = ""  # For S3-compatible services (MinIO, etc.)
+
+    # upload limits
+    max_upload_size_mb: int = 50 #maximum file size in MB
+
+    allowed_file_types: str = (
+        ".pdf, .docx, .doc, .txt, .md, .csv, .xlsx, .xls, .pptx, .ppt, "
+        ".html, .htm, .json, .xml, .rtf, .odt, .epub"
+    )
+
+    @property
+    def max_upload_size_bytes(self) -> int:
+        """Convert MB limit to bytes."""
+        return self.max_upload_size_mb * 1024 * 1024
+    
+    @property
+    def allowed_extensions(self) -> set[str]:
+        """Parse allowed file types into a set"""
+        return {ext.strip() for ext in self.allowed_file_types.split(",")}
+    
+
     # ─── Logging ───────────────────────────────────────────────────
     log_level: str = "INFO"
     log_format: str = "json"  # "json" for production, "text" for development
