@@ -304,9 +304,9 @@ class DocumentService:
 
         if not doc:
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={"document_id": str(document_id), "tenant_id": str(tenant_id)},
             )
 
         return DocumentResponse(
@@ -346,9 +346,9 @@ class DocumentService:
 
         if not doc:
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={document_id: str(document_id), tenant_id: str(tenant_id)},
             )
 
         # Apply updates (only non-None fields)
@@ -412,9 +412,9 @@ class DocumentService:
 
         if not doc:
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={document_id: str(document_id)},
             )
 
         # Validate new file
@@ -510,9 +510,9 @@ class DocumentService:
         )
         if not doc_result.scalar_one_or_none():
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={document_id: str(document_id), tenant_id: str(tenant_id)},
             )
 
         result = await self.db.execute(
@@ -561,9 +561,9 @@ class DocumentService:
 
         if not doc:
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={document_id: str(document_id), tenant_id: str(tenant_id)},
             )
 
         # Get the right version's storage key
@@ -577,8 +577,9 @@ class DocumentService:
             ver = ver_result.scalar_one_or_none()
             if not ver:
                 raise NotFoundError(
-                    message=f"Version {version} not found",
-                    resource_type="DocumentVersion",
+                    resource=f"Version {version} not found",
+                    identifier=str(document_id),
+                    details={document_id: str(document_id), tenant_id: str(tenant_id)},
                 )
             storage_key = ver.storage_key
             file_size = ver.file_size
@@ -627,9 +628,12 @@ class DocumentService:
 
         if not doc:
             raise NotFoundError(
-                message="Document not found",
-                resource_type="Document",
-                resource_id=str(document_id),
+                resource="Document",
+                identifier=str(document_id),
+                details={
+                    document_id: str(document_id),
+                    tenant_id: str(tenant_id),
+                },
             )
 
         doc.is_active = False

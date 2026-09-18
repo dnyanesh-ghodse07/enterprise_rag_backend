@@ -14,11 +14,22 @@ ENDPOINTS:
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, EditorUser
 from app.core.database import get_session
+from app.core.storage.factory import get_storage
 from app.models.document import DocumentStatus
 from app.schemas.auth import MessageResponse
 from app.schemas.document import (
@@ -196,6 +207,29 @@ async def list_versions(
     """Get version history for a document."""
     service = DocumentService(db)
     return await service.get_versions(document_id, user.tenant_id)
+
+
+@router.get(
+    "/files/{file_key:path}",
+    summary="Download a stored file",
+    description="Serves the actual file from the configured local or cloud storage backend.",
+)
+async def serve_document_file(
+    file_key: str,
+    user: CurrentUser = None,
+):
+    """Serve a stored document file from the active storage backend."""
+    storage = get_storage()
+    file_path = storage._resolve_path(file_key)
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=file_path,
+        filename=file_path.name,
+        media_type="application/octet-stream",
+    )
 
 
 @router.get(
