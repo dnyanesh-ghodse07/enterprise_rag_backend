@@ -18,6 +18,8 @@ This is enforced at:
 2. Database RLS (database level, Day 2)
 """
 
+from sqlalchemy import String
+from sqlalchemy import cast
 import math
 from datetime import datetime, timezone
 from uuid import UUID
@@ -43,6 +45,7 @@ from app.schemas.document import (
     DocumentUpdate,
     DocumentUploadResponse,
     DocumentVersionResponse,
+    DocumentStatsResponse
 )
 
 
@@ -639,3 +642,68 @@ class DocumentService:
         doc.is_active = False
         doc.status = DocumentStatus.ARCHIVED
         await self.db.commit()
+
+    async def get_document_stats(
+        self, tenant_id: UUID
+    ) -> DocumentStatsResponse:
+        """
+        Get document statistics for the tenant.
+        """
+        agg_result = await self.db.execute(
+            select(
+                func.count(Document.id).label("total"),
+                func.coalesce(func.sum(Document.file_size), 0).label("storage"),
+            ).where(
+                Document.tenant_id == tenant_id,
+                Document.is_active == True,  # noqa: E712
+            )
+        )
+
+        row = agg_result.one()
+        total: int = row.total or 0
+        storage: int = row.storage or 0
+
+        if total == 0:
+            return NotFoundError(
+                resource="Documents",
+                identifier=str(tenant_id),
+                details={tenant_id: str(tenant_id)}
+            )
+
+        status_rows = await self.db.execute(
+            select(
+                cast(Document.status, String).label('status'),
+                func.count(Document.id).label("count"),
+            ).where(
+                Document.tenant_id == tenant_id,
+                Document.is_active == True,  # noqa: E712
+            ).group_by(Document.status)
+        )
+
+        count_by_status: dict[str, int] = {
+            r.status: int(r.count) for r in status_rows
+        }
+
+        collection_rows = await self.db.execute(
+            select(
+                cast(Document.collection_id, String).label('collection_id'),
+                func.count(Document.id).label("count"),
+            ).where(
+                Document.tenant_id == tenant_id,
+                Document.is_active == True,  # noqa: E712
+                Document.collection_id != None, # noqa: E712
+            ).group_by(Document.collection_id)
+        )
+
+        counts_by_collection: dict[str, int] = {
+            r.collection_id: int(r.count) for r in collection_rows
+        }
+
+        return DocumentStatsResponse(
+            total=total,
+            storage=storage,
+            count_by_status=count_by_status,
+            count_by_collection=counts_by_collection,
+        )
+
+        
