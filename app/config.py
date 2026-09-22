@@ -1,14 +1,20 @@
 from functools import lru_cache
+from pathlib import Path
+
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BACKEND_DIR = Path(__file__).resolve().parent.parent
+
 
 class Settings(BaseSettings):
     """
     Application settings loaded from environment variables.
-    
+
     Each field maps to an environment variable of the same name (uppercase).
     Example: 'app_name' → APP_NAME environment variable
     """
+
     # ─── Application ───────────────────────────────────────────────
     app_name: str = "Cognix"
     app_version: str = "0.1.0"
@@ -25,15 +31,15 @@ class Settings(BaseSettings):
     # ─── Database ──────────────────────────────────────────────────
     # Format: postgresql+asyncpg://user:password@host:port/dbname
     database_url: str = "postgresql+asyncpg://cognix:cognix_dev@localhost:5434/cognix"
-    database_pool_size: int = 20       # Max connections in the pool
-    database_max_overflow: int = 10    # Extra connections allowed beyond pool_size
-    database_pool_timeout: int = 30    # Seconds to wait for a connection
+    database_pool_size: int = 20  # Max connections in the pool
+    database_max_overflow: int = 10  # Extra connections allowed beyond pool_size
+    database_pool_timeout: int = 30  # Seconds to wait for a connection
 
     # ─── Redis ─────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
     redis_ttl_seconds: int = 3600  # Default cache TTL: 1 hour
 
-     # ─── Authentication ────────────────────────────────────────────
+    # ─── Authentication ────────────────────────────────────────────
     secret_key: str = "CHANGE-ME-IN-PRODUCTION-USE-OPENSSL-RAND"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
@@ -51,10 +57,9 @@ class Settings(BaseSettings):
     qdrant_port: int = 6333
     qdrant_collection: str = "cognix_documents"
 
-
     # storage settings
-    storage_backend: str = "local" #local or s3
-    storage_local_path: str = './uploads'
+    storage_backend: str = "local"  # local or s3
+    storage_local_path: str = str((BACKEND_DIR / "uploads").resolve())
 
     # s3 settings(for production)
     s3_bucket_name: str = ""
@@ -64,7 +69,7 @@ class Settings(BaseSettings):
     s3_endpoint_url: str = ""  # For S3-compatible services (MinIO, etc.)
 
     # upload limits
-    max_upload_size_mb: int = 50 #maximum file size in MB
+    max_upload_size_mb: int = 50  # maximum file size in MB
 
     allowed_file_types: str = (
         ".pdf, .docx, .doc, .txt, .md, .csv, .xlsx, .xls, .pptx, .ppt, "
@@ -75,12 +80,11 @@ class Settings(BaseSettings):
     def max_upload_size_bytes(self) -> int:
         """Convert MB limit to bytes."""
         return self.max_upload_size_mb * 1024 * 1024
-    
+
     @property
     def allowed_extensions(self) -> set[str]:
         """Parse allowed file types into a set"""
         return {ext.strip() for ext in self.allowed_file_types.split(",")}
-    
 
     # ─── Logging ───────────────────────────────────────────────────
     log_level: str = "INFO"
@@ -88,13 +92,14 @@ class Settings(BaseSettings):
 
     # ─── Rate Limiting ─────────────────────────────────────────────
     rate_limit_per_minute: int = 60
-    
+
     model_config = SettingsConfigDict(
-        env_file=".env",           # Read from .env file
+        env_file=".env",  # Read from .env file
         env_file_encoding="utf-8",
-        case_sensitive=False,      # APP_NAME and app_name both work
-        extra="ignore",            # Don't fail on unknown env vars
+        case_sensitive=False,  # APP_NAME and app_name both work
+        extra="ignore",  # Don't fail on unknown env vars
     )
+
     @field_validator("openai_api_key")
     def validate_openai_api_key(cls, v: str) -> str:
         if not v.startswith("sk-"):
@@ -112,7 +117,7 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """
     Returns the application settings.
-    
+
     Uses @lru_cache to ensure we only read env vars once.
     This is important because:
     1. Reading env vars repeatedly is wasteful

@@ -86,7 +86,10 @@ class NotFoundError(CognixError):
     """Requested resource does not exist."""
 
     def __init__(
-        self, resource: str, identifier: Any, details: dict[str, Any] | None = None
+        self,
+        resource: str,
+        identifier: Any,
+        details: dict[str, Any] | None = None,
     ):
         super().__init__(
             message=f"{resource} with identifier '{identifier}' not found",

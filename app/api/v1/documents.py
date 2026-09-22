@@ -14,11 +14,22 @@ ENDPOINTS:
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, EditorUser
 from app.core.database import get_session
+from app.core.storage.factory import get_storage
 from app.models.document import DocumentStatus
 from app.schemas.auth import MessageResponse
 from app.schemas.document import (
@@ -28,6 +39,7 @@ from app.schemas.document import (
     DocumentUpdate,
     DocumentUploadResponse,
     DocumentVersionResponse,
+    DocumentStatsResponse
 )
 from app.services.document_service import DocumentService
 
@@ -77,7 +89,6 @@ async def upload_document(
         collection_id=collection_id,
     )
 
-
 @router.get(
     "",
     response_model=DocumentListResponse,
@@ -108,6 +119,20 @@ async def list_documents(
         search=search,
     )
 
+@router.get(
+    "/stats",
+    response_model=DocumentStatsResponse,
+    summary="Get document statistics",
+    description="Get statistics for documents in the current tenant",  
+    response_model_exclude_none=True,    
+)
+async def get_document_stats(
+    user: CurrentUser = None,
+    db: AsyncSession = Depends(get_session),
+) -> DocumentStatsResponse:
+    """Get statistics for documents in the current tenant."""
+    service = DocumentService(db)
+    return await service.get_document_stats(user.tenant_id)
 
 @router.get(
     "/{document_id}",
@@ -122,7 +147,6 @@ async def get_document(
     """Get detailed information about a document."""
     service = DocumentService(db)
     return await service.get_document(document_id, user.tenant_id)
-
 
 @router.patch(
     "/{document_id}",
@@ -139,7 +163,6 @@ async def update_document(
     service = DocumentService(db)
     return await service.update_document(document_id, user.tenant_id, data)
 
-
 @router.delete(
     "/{document_id}",
     response_model=MessageResponse,
@@ -154,7 +177,6 @@ async def delete_document(
     service = DocumentService(db)
     await service.delete_document(document_id, user.tenant_id)
     return MessageResponse(message="Document deleted successfully")
-
 
 @router.post(
     "/{document_id}/versions",
@@ -182,7 +204,6 @@ async def upload_new_version(
         change_note=change_note,
     )
 
-
 @router.get(
     "/{document_id}/versions",
     response_model=list[DocumentVersionResponse],
@@ -197,6 +218,27 @@ async def list_versions(
     service = DocumentService(db)
     return await service.get_versions(document_id, user.tenant_id)
 
+@router.get(
+    "/files/{file_key:path}",
+    summary="Download a stored file",
+    description="Serves the actual file from the configured local or cloud storage backend.",
+)
+async def serve_document_file(
+    file_key: str,
+    user: CurrentUser = None,
+):
+    """Serve a stored document file from the active storage backend."""
+    storage = get_storage()
+    file_path = storage._resolve_path(file_key)
+
+    if not file_path.exists() or not file_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(
+        path=file_path,
+        filename=file_path.name,
+        media_type="application/octet-stream",
+    )
 
 @router.get(
     "/{document_id}/download",

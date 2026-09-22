@@ -213,7 +213,7 @@ class FileValidator:
         if not header:
             raise FileValidationError(
                 "Could not read file content for validation",
-                filed="file_content",
+                field="file_content",
             )
 
         # check if any of the expected signature match
@@ -222,8 +222,8 @@ class FileValidator:
                 return  # Valid!
 
         raise FileValidationError(
-            f"File content does not match the declared file type ({ext}).",
-            f"The file may be corrupted or have been renamed from a different type.",
+            f"File content does not match the declared file type ({ext})."
+            "The file may be corrupted or have been renamed from a different type.",
             field="file_content",
         )
 

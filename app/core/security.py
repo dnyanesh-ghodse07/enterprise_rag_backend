@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 import hashlib
 
 from jose import jwt, JWTError
@@ -107,6 +107,7 @@ def create_access_token(
         "user_id": str(user_id),
         "tenant_id": str(tenant_id),
         "role": role,
+        "jti": str(uuid4()),
         "token_budget": {
             "daily_limit": 10000,
             "monthly_limit": 300000,
@@ -155,6 +156,7 @@ def create_refresh_token(user_id: UUID, expires_delta: timedelta | None = None) 
     payload: dict[str, Any] = {
         "sub": f"user:{user_id}",
         "user_id": str(user_id),
+        "jti": str(uuid4()),
         "type": "refresh",
         "exp": int(expire.timestamp()),
         "iat": int(now.timestamp()),

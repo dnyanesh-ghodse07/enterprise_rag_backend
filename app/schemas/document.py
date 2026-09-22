@@ -8,6 +8,7 @@ SCHEMA CATEGORIES:
 - *InDB: Internal representation (never returned to client)
 """
 
+from app.core import storage
 from datetime import datetime
 from uuid import UUID
 
@@ -97,3 +98,10 @@ class DocumentDownloadResponse(BaseModel):
     mime_type: str
     file_size: int
     expires_in: int = Field(description="URL validity in seconds")
+
+
+class DocumentStatsResponse(BaseModel):
+    total: int
+    storage: int
+    count_by_status: dict[str, int]
+    count_by_collection: dict[str, int]
