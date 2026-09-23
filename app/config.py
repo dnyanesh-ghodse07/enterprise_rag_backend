@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     # ─── Authentication ────────────────────────────────────────────
     secret_key: str = "CHANGE-ME-IN-PRODUCTION-USE-OPENSSL-RAND"
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    access_token_expire_minutes: int = 300
     refresh_token_expire_days: int = 7
 
     # ─── OpenAI ────────────────────────────────────────────────────
@@ -75,6 +75,17 @@ class Settings(BaseSettings):
         ".pdf, .docx, .doc, .txt, .md, .csv, .xlsx, .xls, .pptx, .ppt, "
         ".html, .htm, .json, .xml, .rtf, .odt, .epub"
     )
+
+    # ─── Chunking Settings ────────────────────────────────────
+    chunk_size: int = 500         # Target chunk size in tokens
+    chunk_overlap: int = 50       # Overlap between chunks in tokens
+    max_chunks_per_document: int = 5000  # Safety limit
+    
+    # Embedding model (determines tokenizer)
+    embedding_model: str = "text-embedding-3-small"
+    
+    # Processing
+    max_extraction_size_mb: int = 100  # Max file size for extraction
 
     @property
     def max_upload_size_bytes(self) -> int:

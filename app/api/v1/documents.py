@@ -42,9 +42,9 @@ from app.schemas.document import (
     DocumentStatsResponse
 )
 from app.services.document_service import DocumentService
+from app.services.processing_service import ProcessingService
 
 router = APIRouter()
-
 
 @router.post(
     "/upload",
@@ -258,3 +258,58 @@ async def get_download_url(
         user.tenant_id,
         version=version,
     )
+
+@router.post(
+    "/{document_id}/process",
+    summary="Process a document (extract text and chunk)",
+    description="Triggers text extraction and chunking for a document.",
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def process_document(
+    document_id: UUID,
+    user: EditorUser = None,
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """
+    Process a document: extract text, chunk, and prepare for embedding.
+    
+    This endpoint:
+    1. Reads the document file from storage
+    2. Extracts text (format-specific)
+    3. Splits text into overlapping chunks
+    4. Saves chunks to the database
+    5. Updates document status to "ready"
+    
+    Returns 202 Accepted with processing results.
+    In production, this would be a background task.
+    """
+    service = ProcessingService(db)
+    result = await service.process_document(document_id, user.tenant_id)
+    return result
+
+@router.get(
+    "/{document_id}/chunks",
+    summary="Get document chunks",
+    description="Returns all text chunks for a processed document.",
+)
+async def get_document_chunks(
+    document_id: UUID,
+    user: CurrentUser = None,
+    db: AsyncSession = Depends(get_session),
+) -> list[dict]:
+    """Get the text chunks extracted from a document."""
+    service = ProcessingService(db)
+    return await service.get_chunks(document_id, user.tenant_id)
+
+@router.get(
+    "/{document_id}/processing-status",
+    summary="Get processing status",
+)
+async def get_processing_status(
+    document_id: UUID,
+    user: CurrentUser = None,
+    db: AsyncSession = Depends(get_session),
+) -> dict:
+    """Check the processing status of a document."""
+    service = ProcessingService(db)
+    return await service.get_processing_status(document_id, user.tenant_id)

@@ -5,7 +5,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.collection import Collection
 from app.models.document import Document, DocumentStatus
 from app.models.document_version import DocumentVersion
-
+from app.models.document_chunk import DocumentChunk
 # Backward-compatible alias for code paths still importing UserRoles
 UserRoles = UserRole
 
@@ -22,4 +22,5 @@ __all__ = [
     "Document",
     "DocumentStatus",
     "DocumentVersion",
+    "DocumentChunk"
 ]
