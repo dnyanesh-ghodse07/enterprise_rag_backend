@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config import get_settings
 from app.core.exceptions import CognixError
+from app.core.vector_store import QdrantService
 
 settings = get_settings()
 
@@ -40,6 +41,8 @@ async def lifespan(app: FastAPI):
     # - Database connection verification
     # - Redis connection
     # - Qdrant collection creation
+    qdrant = QdrantService()
+    await qdrant.initialize()
     # - Cache warming
     
     yield  # ← App is running and serving requests
