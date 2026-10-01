@@ -48,14 +48,17 @@ class Settings(BaseSettings):
     # ─── OpenAI ────────────────────────────────────────────────────
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
-    openai_embedding_model: str = "text-embedding-3-small"
     openai_max_tokens: int = 4096
     openai_temperature: float = 0.1  # Low = more deterministic
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+    embedding_batch_size: int = 100  # Chunks per API call
 
-    # ─── Qdrant ────────────────────────────────────────────────────
+    # ─── Qdrant Settings ─────────────────────────────────────
     qdrant_host: str = "localhost"
     qdrant_port: int = 6333
-    qdrant_collection: str = "cognix_documents"
+    qdrant_api_key: str = ""  # For Qdrant Cloud
+    qdrant_collection_name: str = "cognix_documents"
 
     # storage settings
     storage_backend: str = "local"  # local or s3
@@ -81,8 +84,8 @@ class Settings(BaseSettings):
     chunk_overlap: int = 50       # Overlap between chunks in tokens
     max_chunks_per_document: int = 5000  # Safety limit
     
-    # Embedding model (determines tokenizer)
-    embedding_model: str = "text-embedding-3-small"
+    # ─── Search Settings ──────────────────────────────────────
+    search_score_threshold: float = 0.5  # Minimum similarity score (0.0 - 1.0)
     
     # Processing
     max_extraction_size_mb: int = 100  # Max file size for extraction
