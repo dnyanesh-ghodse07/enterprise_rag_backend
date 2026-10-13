@@ -28,6 +28,7 @@ from app.models.collection import Collection  # noqa: F401
 from app.models.document import Document  # noqa: F401
 from app.models.document_version import DocumentVersion  # noqa: F401
 from app.models.document_chunk import DocumentChunk  # noqa: F401
+from app.models.conversation import Conversation, Message  # noqa: F401
 
 from app.config import get_settings
 

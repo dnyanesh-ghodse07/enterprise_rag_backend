@@ -6,6 +6,7 @@ from app.models.collection import Collection
 from app.models.document import Document, DocumentStatus
 from app.models.document_version import DocumentVersion
 from app.models.document_chunk import DocumentChunk
+from app.models.conversation import Conversation, Message
 # Backward-compatible alias for code paths still importing UserRoles
 UserRoles = UserRole
 
@@ -22,5 +23,7 @@ __all__ = [
     "Document",
     "DocumentStatus",
     "DocumentVersion",
-    "DocumentChunk"
+    "DocumentChunk",
+    "Conversation",
+    "Message"
 ]

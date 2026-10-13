@@ -204,7 +204,7 @@ class QdrantService:
         threshold = (
             score_threshold
             if score_threshold is not None
-            else getattr(settings, "search_score_threshold", 0.5)
+            else getattr(settings, "search_score_threshold", 0.3)
         )
         
         response = await self.client.query_points(

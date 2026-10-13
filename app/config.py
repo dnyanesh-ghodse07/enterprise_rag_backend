@@ -45,14 +45,27 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 300
     refresh_token_expire_days: int = 7
 
-    # ─── OpenAI ────────────────────────────────────────────────────
-    openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
-    openai_max_tokens: int = 4096
-    openai_temperature: float = 0.1  # Low = more deterministic
+    # ─── Embeddings ────────────────────────────────────────────
     embedding_model: str = "text-embedding-3-small"
     embedding_dimensions: int = 1536
     embedding_batch_size: int = 100  # Chunks per API call
+
+    # ─── LLM ────────────────────────────────────────────────────
+    openai_api_key: str = ""
+    llm_model: str = "gpt-4o"
+    llm_max_tokens: int = 1500
+    llm_temperature: float = 0.5  # Low = more deterministic
+    llm_top_p: float = 1.0
+
+    # ---- Token budgeting ----
+    max_context_tokens: int = 4000
+    max_content_token: int = 4000
+    max_history_tokens: int = 2000
+    max_history_messages: int = 10
+
+    # -------RAG Settings -------------------
+    rag_top_k: int = 5
+    rag_score_threshold: float = 0.2 # min similarity (0.2 is practical for question-to-chunk cosine similarity)
 
     # ─── Qdrant Settings ─────────────────────────────────────
     qdrant_host: str = "localhost"
@@ -85,7 +98,7 @@ class Settings(BaseSettings):
     max_chunks_per_document: int = 5000  # Safety limit
     
     # ─── Search Settings ──────────────────────────────────────
-    search_score_threshold: float = 0.5  # Minimum similarity score (0.0 - 1.0)
+    search_score_threshold: float = 0.2  # Minimum similarity score (0.0 - 1.0)
     
     # Processing
     max_extraction_size_mb: int = 100  # Max file size for extraction

@@ -16,6 +16,7 @@ WHY SEPARATE:
 """
 
 import enum
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from sqlalchemy import (
@@ -30,6 +31,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.collection import Collection
+    from app.models.document_version import DocumentVersion
+    from app.models.user import User
 
 
 class DocumentStatus(str, enum.Enum):
