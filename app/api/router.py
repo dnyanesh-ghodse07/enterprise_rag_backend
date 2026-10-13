@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import health, auth, user, documents, collections, search
+from app.api.v1 import health, auth, user, documents, collections, search, chat
 
 api_router = APIRouter()
 
@@ -17,3 +17,6 @@ api_router.include_router(
 )
 
 api_router.include_router(search.router, prefix="/search", tags=["Search"])
+
+api_router.include_router(chat.router, prefix="/chat", tags=["Chat"])
+
