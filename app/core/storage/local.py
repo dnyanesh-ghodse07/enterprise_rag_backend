@@ -42,7 +42,6 @@ class LocalStorage(StorageBackend):
                       Defaults to settings.storage_local_path
         """
         base_path = root_path or settings.storage_local_path
-        print("------", base_path)
         self.root = Path(base_path).resolve()
         # Create root directory if it doesn't exist
         self.root.mkdir(parents=True, exist_ok=True)

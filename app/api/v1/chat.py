@@ -18,6 +18,10 @@ from app.core.database import get_session
 from app.schemas.chat import ChatRequest, ChatResponse, ConversationListItem
 from app.services.conversation_service import ConversationService
 from app.services.rag_service import RAGService
+from app.core.query_intelligence import classify_query, QueryRouter
+from app.core.llm.base import LLMMessage
+
+
 
 router = APIRouter()
 
@@ -145,3 +149,47 @@ async def get_conversation(
         user_id=user.id,
         tenant_id=user.tenant_id,
     )
+
+
+@router.post(
+    "/analyze-query",
+    summary="Analyze a query without executing it",
+    description="Returns the query plan: classification, rewrite, strategy.",
+)
+async def analyze_query(
+    request: ChatRequest,
+    user: CurrentUser = None,
+) -> dict:
+    """
+    Analyze a query and return the execution plan WITHOUT running it.
+    
+    Useful for:
+    - Debugging why a query produces bad results
+    - Understanding the query intelligence pipeline
+    - Testing different query phrasings
+    """
+    router = QueryRouter()
+    
+    # Simulate chat history if conversation_id provided
+    chat_history: list[LLMMessage] = []
+    
+    plan = await router.plan(request.question, chat_history)
+    
+    return {
+        "original_query": plan.original_query,
+        "rewritten_query": plan.rewritten_query,
+        "classification": {
+            "type": plan.classification.query_type.value,
+            "confidence": plan.classification.confidence,
+            "reasoning": plan.classification.reasoning,
+        },
+        "strategy": {
+            "skip_retrieval": plan.skip_retrieval,
+            "num_chunks": plan.num_chunks,
+            "temperature": plan.temperature,
+            "use_multi_query": plan.use_multi_query,
+            "use_hyde": plan.use_hyde,
+            "use_compression": plan.use_compression,
+            "search_queries": plan.search_queries,
+        },
+    }
